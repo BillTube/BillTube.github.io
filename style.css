@@ -39,6 +39,7 @@
     color: white;
     outline: none;
     border: 1px solid var(--whitish);
+      display:none;
   }
   input[type='search']:focus {
     background: var(--blackish);
