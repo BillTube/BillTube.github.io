@@ -9,9 +9,9 @@ document.addEventListener("DOMContentLoaded", function() {
   let apiType = "popular";
   let currentQuery;
   let currentFilter = null;
-  const apiKey = "?api_key=f21ecd49e65ebcde5093bfa18b67d3ac"; // Replace with your API key
+  const apiKey = "?api_key=f21ecd49e65ebcde5093bfa18b67d3ac"; // Using your API key
   const imgPath = "https://image.tmdb.org/t/p/w500";
-  let url = `https://api.themoviedb.org/4/list/1${apiKey}&language=en-US&region=US&page=${page}`;
+  let url = `https://api.themoviedb.org/4/list/8271943${apiKey}&language=en-US&region=US&page=${page}`; // Original URL
   const movies = [];
   const moviesData = []; // Array to store movie data
   const favorites = JSON.parse(localStorage.getItem('favorites')) || []; // Load favorites from localStorage
@@ -101,7 +101,7 @@ document.addEventListener("DOMContentLoaded", function() {
     page++;
     switch (option) {
       case "popular":
-        url = `https://api.themoviedb.org/4/list/1${apiKey}&language=en-US&region=US&page=${page}`;
+        url = `https://api.themoviedb.org/4/list/8271943${apiKey}&language=en-US&region=US&page=${page}`; // Original URL
         break;
       case "search":
         url = `https://api.themoviedb.org/3/search/movie${apiKey}&language=en-US&region=US&query=${encodeURI(query)}&page=${page}&include_adult=${adult}`;
@@ -131,6 +131,9 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Initial fetch of movies (load first 5 pages)
   const initialLoad = async function () {
+    page = 1; // Reset page number
+    moviesData.length = 0; // Clear moviesData
+    url = `https://api.themoviedb.org/4/list/8271943${apiKey}&language=en-US&region=US&page=${page}`; // Reset URL
     for (let i = 0; i < 5; i++) {
       await getM(url, posterPop);
       scroll(apiType, currentQuery);
@@ -171,12 +174,9 @@ document.addEventListener("DOMContentLoaded", function() {
   homeBtn.addEventListener("click", () => {
     apiType = "popular";
     currentFilter = null;
-    for (let x of filters) { x.classList.remove("selected") };
-    page = 1;
+    filters.forEach(x => x.classList.remove("selected"));
     document.querySelectorAll(".movieBox").forEach(mov => mov.remove());
     movies.length = 0;
-    moviesData.length = 0; // Clear movie data
-    url = `https://api.themoviedb.org/4/list/1${apiKey}&language=en-US&region=US&page=${page}`;
     initialLoad();
     document.querySelector("#resultText").innerHTML = "";
     window.scrollTo(0, 0);
@@ -197,7 +197,7 @@ document.addEventListener("DOMContentLoaded", function() {
         e.target.classList.remove("selected");
         currentFilter = null;
       } else {
-        for (let x of filters) { x.classList.remove("selected") };
+        filters.forEach(x => x.classList.remove("selected"));
         e.target.classList.add("selected");
         currentFilter = e.target.getAttribute("id");
       }
@@ -205,7 +205,6 @@ document.addEventListener("DOMContentLoaded", function() {
       document.querySelectorAll(".movieBox").forEach(mov => mov.remove());
       movies.length = 0;
       moviesData.length = 0; // Clear movie data
-      url = `https://api.themoviedb.org/4/list/1${apiKey}&language=en-US&region=US&page=${page}`;
       initialLoad();
     });
   });
