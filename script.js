@@ -6,24 +6,26 @@ document.addEventListener("DOMContentLoaded", function() {
   document.querySelector("head").append(fontAwesome);
 
   let page = 1;
-  let apiType = "popular";
-  let currentQuery;
+  let currentQuery = '';
   let currentFilter = null;
   const apiKey = "?api_key=f21ecd49e65ebcde5093bfa18b67d3ac"; // Using your API key
   const imgPath = "https://image.tmdb.org/t/p/w500";
-  let url = `https://api.themoviedb.org/4/list/8271943${apiKey}&language=en-US&region=US&page=${page}`;
-  const movies = [];
+  const baseUrl = "https://api.themoviedb.org/4/list/8271943"; // Base URL for your movie list
   const moviesData = []; // Array to store all movie data
   const form = document.querySelector("form");
   const searchBox = document.querySelector("input[type='search']");
   const homeBtn = document.querySelector("#home");
   const gridSizeBtn = document.querySelector("#gridSize");
   const filters = document.querySelectorAll(".filter");
+  const movieResults = document.querySelector(".movieResults");
+  const resultText = document.querySelector("#resultText");
+  const toTopBtn = document.querySelector("#toTop");
+  const loadingIcon = document.querySelector("#loading");
 
   // Fetch movies from API and process them
-  const getM = async function (site) {
+  const getMovies = async function (url) {
     try {
-      let res = await fetch(site);
+      let res = await fetch(url);
       let resJSON = await res.json();
       return resJSON;
     } catch (error) {
@@ -75,103 +77,113 @@ document.addEventListener("DOMContentLoaded", function() {
             <p style="background-color:${colorByRating(rating)}">${rating}</p>
           </div>`;
         newContain.classList.add("movieBox");
-        document.querySelector(".movieResults").append(newContain);
-        movies.push(newContain);
+        movieResults.append(newContain);
       }
     });
   };
 
-  // Handle infinite scroll
-  const scroll = function () {
-    page++;
-    url = `https://api.themoviedb.org/4/list/8271943${apiKey}&language=en-US&region=US&page=${page}`;
+  // Show loading icon
+  const showLoading = function () {
+    loadingIcon.style.display = "block";
   };
 
-  // Handle form submission
-  const sendForm = async function () {
-    let query = searchBox.value.trim();
-    currentQuery = query;
-    searchBox.value = '';
-    if (query === '') return;
-    document.querySelector("#resultText").innerHTML = `Loading results for "${currentQuery}"...`;
-    document.querySelectorAll(".movieBox").forEach(mov => mov.remove());
-    movies.length = 0;
-    moviesData.length = 0;
-    await loadAllMovies();
-    localSearch(query);
+  // Hide loading icon
+  const hideLoading = function () {
+    loadingIcon.style.display = "none";
   };
 
   // Load all movies before searching
   const loadAllMovies = async function () {
     page = 1;
     let totalPages = 1;
+    moviesData.length = 0; // Clear existing data
+    showLoading();
     do {
-      let currentUrl = `https://api.themoviedb.org/4/list/8271943${apiKey}&language=en-US&region=US&page=${page}`;
-      let resJSON = await getM(currentUrl);
+      let currentUrl = `${baseUrl}${apiKey}&language=en-US&region=US&page=${page}`;
+      let resJSON = await getMovies(currentUrl);
       moviesData.push(...resJSON.results);
       totalPages = resJSON.total_pages;
       page++;
     } while (page <= totalPages);
+    hideLoading();
   };
 
-  // Perform local search
-  const localSearch = function (query) {
+  // Perform search
+  const performSearch = function (query) {
     let filteredMovies = moviesData.filter(movie => movie.original_title.toLowerCase().includes(query.toLowerCase()));
+    movieResults.innerHTML = ''; // Clear current movie display
     if (filteredMovies.length === 0) {
-      document.querySelector("#resultText").innerHTML = `No results found for "${currentQuery}".`;
+      resultText.innerHTML = `No results found for "${query}".`;
     } else {
       posterPop(filteredMovies);
-      document.querySelector("#resultText").innerHTML = `Search results for "${currentQuery}":`;
+      resultText.innerHTML = `Search results for "${query}":`;
     }
+  };
+
+  // Handle form submission
+  const handleFormSubmit = async function (e) {
+    e.preventDefault();
+    let query = searchBox.value.trim();
+    if (query === '') return;
+    currentQuery = query;
+    searchBox.value = '';
+    resultText.innerHTML = `Loading results for "${currentQuery}"...`;
+    showLoading();
+    await loadAllMovies();
+    performSearch(currentQuery);
+    hideLoading();
   };
 
   // Initial load with infinite scroll
   const initialLoad = async function () {
-    let resJSON = await getM(url);
+    page = 1;
+    moviesData.length = 0;
+    movieResults.innerHTML = '';
+    resultText.innerHTML = '';
+    await loadMoreMovies();
+  };
+
+  // Load more movies for infinite scroll
+  const loadMoreMovies = async function () {
+    if (page === null) return; // No more pages to load
+    showLoading();
+    let currentUrl = `${baseUrl}${apiKey}&language=en-US&region=US&page=${page}`;
+    let resJSON = await getMovies(currentUrl);
     posterPop(resJSON.results);
     moviesData.push(...resJSON.results);
-    if (resJSON.page < resJSON.total_pages) {
-      scroll();
+    if (page < resJSON.total_pages) {
+      page++;
+    } else {
+      page = null; // No more pages to load
     }
+    hideLoading();
   };
 
   // Event listeners
   window.addEventListener("scroll", async () => {
     if (window.scrollY > 100) {
-      document.querySelector("#toTop").style.display = "block";
+      toTopBtn.style.display = "block";
     } else {
-      document.querySelector("#toTop").style.display = "none";
+      toTopBtn.style.display = "none";
     }
-    if (movies.length && movies[movies.length - 1].offsetTop - (window.scrollY + window.innerHeight) <= 0) {
-      let resJSON = await getM(url);
-      posterPop(resJSON.results);
-      moviesData.push(...resJSON.results);
-      if (resJSON.page < resJSON.total_pages) {
-        scroll();
-      }
+    if (!currentQuery && page && (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+      await loadMoreMovies();
     }
   });
 
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    sendForm();
-  });
+  form.addEventListener("submit", handleFormSubmit);
 
   homeBtn.addEventListener("click", () => {
-    currentFilter = null;
+    currentQuery = '';
+    searchBox.value = '';
     filters.forEach(x => x.classList.remove("selected"));
-    document.querySelectorAll(".movieBox").forEach(mov => mov.remove());
-    movies.length = 0;
-    moviesData.length = 0;
-    page = 1;
-    url = `https://api.themoviedb.org/4/list/8271943${apiKey}&language=en-US&region=US&page=${page}`;
+    currentFilter = null;
     initialLoad();
-    document.querySelector("#resultText").innerHTML = "";
     window.scrollTo(0, 0);
   });
 
   gridSizeBtn.addEventListener("click", () => {
-    document.querySelector(".movieResults").classList.toggle("grid-large");
+    movieResults.classList.toggle("grid-large");
   });
 
   filters.forEach(filter => {
@@ -184,17 +196,18 @@ document.addEventListener("DOMContentLoaded", function() {
         filter.classList.add("selected");
         currentFilter = filter.getAttribute("id");
       }
-      document.querySelectorAll(".movieBox").forEach(mov => mov.remove());
-      movies.length = 0;
-      page = 1;
-      url = `https://api.themoviedb.org/4/list/8271943${apiKey}&language=en-US&region=US&page=${page}`;
-      initialLoad();
+      if (currentQuery) {
+        // If a search is active, filter the search results
+        performSearch(currentQuery);
+      } else {
+        // If no search, reset and load movies with new filter
+        initialLoad();
+      }
     });
   });
 
-  document.querySelector("#toTop").addEventListener("click", () => { window.scrollTo(0, 0) });
+  toTopBtn.addEventListener("click", () => { window.scrollTo(0, 0) });
 
   // Initial load
   initialLoad();
 });
-
