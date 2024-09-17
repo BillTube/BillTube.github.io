@@ -1,16 +1,40 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>CodePen - blltb</title>
+  <title>Movie List</title>
   <link rel="stylesheet" href="./style.css">
-
 </head>
 <body>
-<!-- partial:index.partial.html -->
-<header> <h3 id="resultText"></h3> <form action=""> <label for="searchBox"> <input type="search" name="searchBox" placeholder="Search..."> </label></form></header><!-- <p id="ad">a</p> --><aside> <i class="fa-sharp fa-solid fa-house" id="home"></i> <p>Filter:</p> <div class="filter" id="great">7+</div> <div class="filter" id="good">5+</div> <div class="filter" id="ok">3+</div> <i class="fa-solid fa-arrow-up" id="toTop"></i></aside><section class="movieResults"></section>
-<!-- partial -->
-  <script  src="./script.js"></script>
-
+  <header>
+    <h3 id="resultText"></h3>
+    <form action="">
+      <label for="searchBox">
+        <input type="search" name="searchBox" placeholder="Search...">
+      </label>
+    </form>
+  </header>
+  
+  <aside>
+    <!-- Home Button -->
+    <i class="fa-sharp fa-solid fa-house" id="home"></i>
+    <!-- Favorites Button -->
+    <button id="favorites">Favorites</button>
+    <!-- Grid Size Toggle Button -->
+    <button id="gridSize">Toggle Grid Size</button>
+    <!-- Filters -->
+    <p>Filter:</p>
+    <div class="filter" id="great">7+</div>
+    <div class="filter" id="good">5+</div>
+    <div class="filter" id="ok">3+</div>
+    <!-- Scroll to Top Button -->
+    <i class="fa-solid fa-arrow-up" id="toTop"></i>
+  </aside>
+  
+  <!-- Movie Results Container -->
+  <section class="movieResults"></section>
+  
+  <!-- Include your script at the end of the body -->
+  <script src="./script.js"></script>
 </body>
 </html>
