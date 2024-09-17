@@ -21,8 +21,9 @@
     <!-- Home Button -->
     <i class="fa-sharp fa-solid fa-house" id="home"></i>
     <!-- Grid Size Toggle Button -->
-    <button id="gridSize">
-      <i class="fa-light fa-grid"></i>
+    <button id="gridSize" aria-label="Toggle Grid Size">
+      <!-- Use the appropriate icon -->
+      <i class="fa-solid fa-th"></i>
     </button>
     <!-- Filters -->
     <p>Filter:</p>
@@ -32,6 +33,11 @@
     <!-- Scroll to Top Button -->
     <i class="fa-solid fa-arrow-up" id="toTop"></i>
   </aside>
+  
+  <!-- Loading Icon -->
+  <div id="loading" class="loading">
+    <i class="fa-solid fa-spinner fa-spin"></i>
+  </div>
   
   <!-- Movie Results Container -->
   <section class="movieResults"></section>
