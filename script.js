@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", function() {
   let currentFilter = null;
   const apiKey = "?api_key=f21ecd49e65ebcde5093bfa18b67d3ac"; // Using your API key
   const imgPath = "https://image.tmdb.org/t/p/w500";
-  const baseUrl = "https://api.themoviedb.org/4/list/8271943"; // Base URL for your movie list
+  const baseUrl = "https://api.themoviedb.org/4/list/8426658"; // Base URL for your movie list
   const moviesData = []; // Array to store all movie data
   const form = document.querySelector("form");
   const searchBox = document.querySelector("input[type='search']");
