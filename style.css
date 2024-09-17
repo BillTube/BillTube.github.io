@@ -39,7 +39,7 @@
     color: white;
     outline: none;
     border: 1px solid var(--whitish);
-      display:none;
+    /* Removed display: none; */
   }
   input[type='search']:focus {
     background: var(--blackish);
@@ -114,7 +114,6 @@
     margin: 0;
     box-shadow: 5px 5px 10px var(--blackish);
     overflow: hidden;
-    /* Removed flex properties as we're using grid */
   }
 
   .movie {
