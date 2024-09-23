@@ -93,50 +93,25 @@ document.addEventListener("DOMContentLoaded", function() {
     loadingIcon.style.display = "none";
   };
 
-  // Load all movies before searching
-  const loadAllMovies = async function () {
-    page = 1;
-    let totalPages = 1;
-    moviesData.clear(); // Clear existing data
+  // Load more movies
+  const loadMoreMovies = async function () {
+    if (page === null) return; // No more pages to load
     showLoading();
-    do {
-      let currentUrl = `${baseUrl}${apiKey}&language=en-US&region=US&page=${page}`;
-      let resJSON = await getMovies(currentUrl);
-      resJSON.results.forEach(movie => {
-        if (!moviesData.has(movie.id)) {
-          moviesData.set(movie.id, movie);
-        }
-      });
-      totalPages = resJSON.total_pages;
+    let currentUrl = `${baseUrl}${apiKey}&language=en-US&region=US&page=${page}`;
+    let resJSON = await getMovies(currentUrl);
+    let newMovies = resJSON.results.filter(movie => !moviesData.has(movie.id));
+    newMovies.forEach(movie => moviesData.set(movie.id, movie));
+    posterPop(newMovies);
+    if (page < resJSON.total_pages) {
       page++;
-    } while (page <= totalPages);
+    } else {
+      page = null; // No more pages to load
+    }
     hideLoading();
   };
 
-  // Virtual scroll function
-  const virtualScroll = async function(movies, pageSize = 10) {
-    let currentIndex = 0;
-    
-    const loadNextBatch = async () => {
-      if (currentIndex >= movies.length) return;
-      
-      let batch = movies.slice(currentIndex, currentIndex + pageSize);
-      posterPop(batch);
-      currentIndex += pageSize;
-      
-      // Simulate scrolling
-      window.scrollTo(0, document.body.scrollHeight);
-      
-      // Load next batch after a delay
-      await new Promise(resolve => setTimeout(resolve, 500)); // 0.5 second delay
-      await loadNextBatch();
-    };
-    
-    await loadNextBatch();
-  };
-
   // Perform search
-  const performSearch = async function (query) {
+  const performSearch = function (query) {
     let filteredMovies = Array.from(moviesData.values()).filter(movie => 
       movie.original_title.toLowerCase().includes(query.toLowerCase()) &&
       movie.vote_average >= filterToNum(currentFilter)
@@ -145,8 +120,8 @@ document.addEventListener("DOMContentLoaded", function() {
     if (filteredMovies.length === 0) {
       resultText.innerHTML = `No results found for "${query}".`;
     } else {
+      posterPop(filteredMovies);
       resultText.innerHTML = `Search results for "${query}":`;
-      await virtualScroll(filteredMovies);
     }
   };
 
@@ -159,30 +134,28 @@ document.addEventListener("DOMContentLoaded", function() {
     searchBox.value = '';
     resultText.innerHTML = `Loading results for "${currentQuery}"...`;
     showLoading();
-    await loadAllMovies();
-    await performSearch(currentQuery);
+    performSearch(currentQuery);
     hideLoading();
   };
 
-  // Initial load with virtual scroll
+  // Initial load
   const initialLoad = async function () {
     page = 1;
     moviesData.clear();
     movieResults.innerHTML = '';
     resultText.innerHTML = '';
-    await loadAllMovies();
-    let allMovies = Array.from(moviesData.values()).filter(movie => 
-      movie.vote_average >= filterToNum(currentFilter)
-    );
-    await virtualScroll(allMovies);
+    await loadMoreMovies();
   };
 
   // Event listeners
-  window.addEventListener("scroll", () => {
+  window.addEventListener("scroll", async () => {
     if (window.scrollY > 100) {
       toTopBtn.style.display = "block";
     } else {
       toTopBtn.style.display = "none";
+    }
+    if (!currentQuery && page && (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+      await loadMoreMovies();
     }
   });
 
@@ -194,7 +167,6 @@ document.addEventListener("DOMContentLoaded", function() {
     filters.forEach(x => x.classList.remove("selected"));
     currentFilter = null;
     initialLoad();
-    window.scrollTo(0, 0);
   });
 
   gridSizeBtn.addEventListener("click", () => {
@@ -214,10 +186,10 @@ document.addEventListener("DOMContentLoaded", function() {
       showLoading();
       if (currentQuery) {
         // If a search is active, filter the search results
-        await performSearch(currentQuery);
+        performSearch(currentQuery);
       } else {
         // If no search, reset and load movies with new filter
-        await initialLoad();
+        initialLoad();
       }
       hideLoading();
     });
