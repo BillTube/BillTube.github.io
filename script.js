@@ -113,15 +113,40 @@ document.addEventListener("DOMContentLoaded", function() {
     hideLoading();
   };
 
+  // Virtual scroll function
+  const virtualScroll = async function(movies, pageSize = 10) {
+    let currentIndex = 0;
+    
+    const loadNextBatch = async () => {
+      if (currentIndex >= movies.length) return;
+      
+      let batch = movies.slice(currentIndex, currentIndex + pageSize);
+      posterPop(batch);
+      currentIndex += pageSize;
+      
+      // Simulate scrolling
+      window.scrollTo(0, document.body.scrollHeight);
+      
+      // Load next batch after a delay
+      await new Promise(resolve => setTimeout(resolve, 500)); // 0.5 second delay
+      await loadNextBatch();
+    };
+    
+    await loadNextBatch();
+  };
+
   // Perform search
-  const performSearch = function (query) {
-    let filteredMovies = Array.from(moviesData.values()).filter(movie => movie.original_title.toLowerCase().includes(query.toLowerCase()));
+  const performSearch = async function (query) {
+    let filteredMovies = Array.from(moviesData.values()).filter(movie => 
+      movie.original_title.toLowerCase().includes(query.toLowerCase()) &&
+      movie.vote_average >= filterToNum(currentFilter)
+    );
     movieResults.innerHTML = ''; // Clear current movie display
     if (filteredMovies.length === 0) {
       resultText.innerHTML = `No results found for "${query}".`;
     } else {
-      posterPop(filteredMovies);
       resultText.innerHTML = `Search results for "${query}":`;
+      await virtualScroll(filteredMovies);
     }
   };
 
@@ -135,45 +160,29 @@ document.addEventListener("DOMContentLoaded", function() {
     resultText.innerHTML = `Loading results for "${currentQuery}"...`;
     showLoading();
     await loadAllMovies();
-    performSearch(currentQuery);
+    await performSearch(currentQuery);
     hideLoading();
   };
 
-  // Initial load with infinite scroll
+  // Initial load with virtual scroll
   const initialLoad = async function () {
     page = 1;
     moviesData.clear();
     movieResults.innerHTML = '';
     resultText.innerHTML = '';
-    await loadMoreMovies();
-  };
-
-  // Load more movies for infinite scroll
-  const loadMoreMovies = async function () {
-    if (page === null) return; // No more pages to load
-    showLoading();
-    let currentUrl = `${baseUrl}${apiKey}&language=en-US&region=US&page=${page}`;
-    let resJSON = await getMovies(currentUrl);
-    let newMovies = resJSON.results.filter(movie => !moviesData.has(movie.id));
-    posterPop(newMovies);
-    newMovies.forEach(movie => moviesData.set(movie.id, movie));
-    if (page < resJSON.total_pages) {
-      page++;
-    } else {
-      page = null; // No more pages to load
-    }
-    hideLoading();
+    await loadAllMovies();
+    let allMovies = Array.from(moviesData.values()).filter(movie => 
+      movie.vote_average >= filterToNum(currentFilter)
+    );
+    await virtualScroll(allMovies);
   };
 
   // Event listeners
-  window.addEventListener("scroll", async () => {
+  window.addEventListener("scroll", () => {
     if (window.scrollY > 100) {
       toTopBtn.style.display = "block";
     } else {
       toTopBtn.style.display = "none";
-    }
-    if (!currentQuery && page && (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-      await loadMoreMovies();
     }
   });
 
@@ -193,7 +202,7 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   filters.forEach(filter => {
-    filter.addEventListener("click", () => {
+    filter.addEventListener("click", async () => {
       if (filter.classList.contains("selected")) {
         filter.classList.remove("selected");
         currentFilter = null;
@@ -202,13 +211,15 @@ document.addEventListener("DOMContentLoaded", function() {
         filter.classList.add("selected");
         currentFilter = filter.getAttribute("id");
       }
+      showLoading();
       if (currentQuery) {
         // If a search is active, filter the search results
-        performSearch(currentQuery);
+        await performSearch(currentQuery);
       } else {
         // If no search, reset and load movies with new filter
-        initialLoad();
+        await initialLoad();
       }
+      hideLoading();
     });
   });
 
