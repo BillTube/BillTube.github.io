@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const apiKey = "?api_key=f21ecd49e65ebcde5093bfa18b67d3ac"; // Using your API key
   const imgPath = "https://image.tmdb.org/t/p/w500";
   const baseUrl = "https://api.themoviedb.org/4/list/8426658"; // Base URL for your movie list
-  const moviesData = []; // Array to store all movie data
+  const moviesData = new Map(); // Map to store movie data with id as key
   const form = document.querySelector("form");
   const searchBox = document.querySelector("input[type='search']");
   const homeBtn = document.querySelector("#home");
@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", function() {
   // Populate movie posters
   const posterPop = function (moviesList) {
     moviesList.forEach(movie => {
-      const { original_title, vote_average, poster_path, overview } = movie;
+      const { id, original_title, vote_average, poster_path, overview } = movie;
       let rating = vote_average.toFixed(1);
       if (rating >= filterToNum(currentFilter)) {
         let desc = overview ? (overview.split(' ').slice(0, 54).join(' ') + (overview.split(' ').length > 54 ? "..." : "")) : "No overview available.";
@@ -77,6 +77,7 @@ document.addEventListener("DOMContentLoaded", function() {
             <p style="background-color:${colorByRating(rating)}">${rating}</p>
           </div>`;
         newContain.classList.add("movieBox");
+        newContain.id = `movie-${id}`; // Add unique id to each movie container
         movieResults.append(newContain);
       }
     });
@@ -96,12 +97,16 @@ document.addEventListener("DOMContentLoaded", function() {
   const loadAllMovies = async function () {
     page = 1;
     let totalPages = 1;
-    moviesData.length = 0; // Clear existing data
+    moviesData.clear(); // Clear existing data
     showLoading();
     do {
       let currentUrl = `${baseUrl}${apiKey}&language=en-US&region=US&page=${page}`;
       let resJSON = await getMovies(currentUrl);
-      moviesData.push(...resJSON.results);
+      resJSON.results.forEach(movie => {
+        if (!moviesData.has(movie.id)) {
+          moviesData.set(movie.id, movie);
+        }
+      });
       totalPages = resJSON.total_pages;
       page++;
     } while (page <= totalPages);
@@ -110,7 +115,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Perform search
   const performSearch = function (query) {
-    let filteredMovies = moviesData.filter(movie => movie.original_title.toLowerCase().includes(query.toLowerCase()));
+    let filteredMovies = Array.from(moviesData.values()).filter(movie => movie.original_title.toLowerCase().includes(query.toLowerCase()));
     movieResults.innerHTML = ''; // Clear current movie display
     if (filteredMovies.length === 0) {
       resultText.innerHTML = `No results found for "${query}".`;
@@ -137,7 +142,7 @@ document.addEventListener("DOMContentLoaded", function() {
   // Initial load with infinite scroll
   const initialLoad = async function () {
     page = 1;
-    moviesData.length = 0;
+    moviesData.clear();
     movieResults.innerHTML = '';
     resultText.innerHTML = '';
     await loadMoreMovies();
@@ -149,8 +154,9 @@ document.addEventListener("DOMContentLoaded", function() {
     showLoading();
     let currentUrl = `${baseUrl}${apiKey}&language=en-US&region=US&page=${page}`;
     let resJSON = await getMovies(currentUrl);
-    posterPop(resJSON.results);
-    moviesData.push(...resJSON.results);
+    let newMovies = resJSON.results.filter(movie => !moviesData.has(movie.id));
+    posterPop(newMovies);
+    newMovies.forEach(movie => moviesData.set(movie.id, movie));
     if (page < resJSON.total_pages) {
       page++;
     } else {
