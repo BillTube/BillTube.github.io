@@ -39,10 +39,10 @@ document.addEventListener("DOMContentLoaded", function() {
   let currentQuery = '';
   let currentSort = "original_order.asc";
   let currentFilter = null;
-  const apiKey = "?api_key=f21ecd49e65ebcde5093bfa18b67d3ac"; // Using your API key
+  const apiKey = "?api_key=f21ecd49e65ebcde5093bfa18b67d3ac";
   const imgPath = "https://image.tmdb.org/t/p/w500";
-  const baseUrl = "https://api.themoviedb.org/4/list/8426658"; // Base URL for your movie list
-  const moviesData = new Map(); // Map to store movie data with id as key
+  const baseUrl = "https://api.themoviedb.org/4/list/8426658";
+  const moviesData = new Map();
   const form = document.querySelector("form");
   const searchBox = document.querySelector("input[type='search']");
   const homeBtn = document.querySelector("#home");
@@ -108,6 +108,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Populate movie posters
   const posterPop = function (moviesList) {
+    movieResults.innerHTML = ''; // Clear current movie display
     moviesList.forEach(movie => {
       const { id, original_title, vote_average, poster_path, overview } = movie;
       let rating = vote_average.toFixed(1);
@@ -151,7 +152,14 @@ document.addEventListener("DOMContentLoaded", function() {
     let resJSON = await getMovies(currentUrl);
     let newMovies = resJSON.results.filter(movie => !moviesData.has(movie.id));
     newMovies.forEach(movie => moviesData.set(movie.id, movie));
-    posterPop(newMovies);
+    
+    let filteredMovies = Array.from(moviesData.values()).filter(movie => 
+      (!currentQuery || movie.original_title.toLowerCase().includes(currentQuery.toLowerCase())) &&
+      movie.vote_average >= filterToNum(currentFilter)
+    );
+    
+    posterPop(filteredMovies);
+    
     if (page < resJSON.total_pages) {
       page++;
     } else {
@@ -160,18 +168,18 @@ document.addEventListener("DOMContentLoaded", function() {
     hideLoading();
   };
 
-  // Perform search
-  const performSearch = function (query) {
+  // Perform search and filter
+  const performSearchAndFilter = function () {
     let filteredMovies = Array.from(moviesData.values()).filter(movie => 
-      movie.original_title.toLowerCase().includes(query.toLowerCase()) &&
+      (!currentQuery || movie.original_title.toLowerCase().includes(currentQuery.toLowerCase())) &&
       movie.vote_average >= filterToNum(currentFilter)
     );
-    movieResults.innerHTML = ''; // Clear current movie display
+    
     if (filteredMovies.length === 0) {
-      resultText.innerHTML = `No results found for "${query}".`;
+      resultText.innerHTML = currentQuery ? `No results found for "${currentQuery}".` : "No movies match the current filter.";
     } else {
       posterPop(filteredMovies);
-      resultText.innerHTML = `Search results for "${query}":`;
+      resultText.innerHTML = currentQuery ? `Search results for "${currentQuery}":` : "";
     }
   };
 
@@ -179,21 +187,21 @@ document.addEventListener("DOMContentLoaded", function() {
   const handleFormSubmit = async function (e) {
     e.preventDefault();
     let query = searchBox.value.trim();
-    if (query === '') return;
+    if (query === currentQuery) return;
     currentQuery = query;
     searchBox.value = '';
     resultText.innerHTML = `Loading results for "${currentQuery}"...`;
     showLoading();
-    await loadAllMovies(); // Ensure all movies are loaded before searching
-    performSearch(currentQuery);
+    await loadAllMovies();
+    performSearchAndFilter();
     hideLoading();
   };
 
-  // Load all movies before searching
+  // Load all movies
   const loadAllMovies = async function () {
     page = 1;
     let totalPages = 1;
-    moviesData.clear(); // Clear existing data
+    moviesData.clear();
     do {
       let currentUrl = `${baseUrl}${apiKey}&language=en-US&region=US&page=${page}`;
       let resJSON = await getMovies(currentUrl);
@@ -247,7 +255,8 @@ document.addEventListener("DOMContentLoaded", function() {
   sortSelect.addEventListener("change", async () => {
     currentSort = sortSelect.value;
     showLoading();
-    await initialLoad(); // Reset and load with new sort order
+    await loadAllMovies();
+    performSearchAndFilter();
     hideLoading();
   });
 
@@ -262,15 +271,7 @@ document.addEventListener("DOMContentLoaded", function() {
         currentFilter = filter.getAttribute("id");
       }
       showLoading();
-      if (currentQuery) {
-        // If a search is active, filter the search results
-        performSearch(currentQuery);
-      } else {
-        // If no search, reset and load movies with new filter
-        await loadAllMovies();
-        movieResults.innerHTML = '';
-        posterPop(Array.from(moviesData.values()));
-      }
+      performSearchAndFilter();
       hideLoading();
     });
   });
