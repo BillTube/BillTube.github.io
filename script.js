@@ -5,6 +5,36 @@ document.addEventListener("DOMContentLoaded", function() {
   fontAwesome.setAttribute("crossorigin", "anonymous");
   document.querySelector("head").append(fontAwesome);
 
+  // Add CSS for the sorting dropdown
+  const style = document.createElement('style');
+  style.textContent = `
+    #sortOrder {
+      background-color: #2c2c2c;
+      color: #ffffff;
+      border: 1px solid #3c3c3c;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-right: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    #sortOrder:hover {
+      background-color: #3c3c3c;
+    }
+
+    #sortOrder:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+    }
+
+    #sortOrder option {
+      background-color: #2c2c2c;
+    }
+  `;
+  document.head.appendChild(style);
+
   let page = 1;
   let currentQuery = '';
   let currentSort = "original_order.asc";
@@ -25,12 +55,12 @@ document.addEventListener("DOMContentLoaded", function() {
   const sortSelect = document.createElement("select");
   sortSelect.id = "sortOrder";
   sortSelect.innerHTML = `
-    <option value="original_order.asc">Original Order</option>
-    <option value="popularity.desc">Popularity Descending</option>
-    <option value="vote_average.desc">Rating Descending</option>
-    <option value="primary_release_date.desc">Release Date Descending</option>
+    <option value="original_order.asc">Sort By</option>
+    <option value="popularity.desc">Popularity</option>
+    <option value="vote_average.desc">Rating</option>
+    <option value="primary_release_date.desc">Release Date</option>
   `;
-  form.appendChild(sortSelect);
+  form.insertBefore(sortSelect, form.firstChild);
 
   // Fetch movies from API and process them
   const getMovies = async function (url) {
