@@ -7,7 +7,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
   let page = 1;
   let currentQuery = '';
-  let currentFilter = null;
   let currentSort = "original_order.asc";
   const apiKey = "?api_key=f21ecd49e65ebcde5093bfa18b67d3ac"; // Using your API key
   const imgPath = "https://image.tmdb.org/t/p/w500";
@@ -17,7 +16,6 @@ document.addEventListener("DOMContentLoaded", function() {
   const searchBox = document.querySelector("input[type='search']");
   const homeBtn = document.querySelector("#home");
   const gridSizeBtn = document.querySelector("#gridSize");
-  const filters = document.querySelectorAll(".filter");
   const movieResults = document.querySelector(".movieResults");
   const resultText = document.querySelector("#resultText");
   const toTopBtn = document.querySelector("#toTop");
@@ -63,39 +61,23 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   };
 
-  // Convert filter to numerical rating
-  const filterToNum = (filter) => {
-    switch (filter) {
-      case "great":
-        return 7;
-      case "good":
-        return 5;
-      case "ok":
-        return 3;
-      default:
-        return 0; // Show all movies if no filter is selected
-    }
-  };
-
   // Populate movie posters
   const posterPop = function (moviesList) {
     moviesList.forEach(movie => {
       const { id, original_title, vote_average, poster_path, overview } = movie;
       let rating = vote_average.toFixed(1);
-      if (rating >= filterToNum(currentFilter)) {
-        let desc = overview ? (overview.split(' ').slice(0, 54).join(' ') + (overview.split(' ').length > 54 ? "..." : "")) : "No overview available.";
-        let newContain = document.createElement("div");
-        newContain.innerHTML = `
-          <div class="movie" data-overview="${desc}" style="background:center / cover url(${imgPath}${poster_path})">
-          </div>
-          <div class="movieFooter">
-            <h2>${original_title}</h2>
-            <p style="background-color:${colorByRating(rating)}">${rating}</p>
-          </div>`;
-        newContain.classList.add("movieBox");
-        newContain.id = `movie-${id}`; // Add unique id to each movie container
-        movieResults.append(newContain);
-      }
+      let desc = overview ? (overview.split(' ').slice(0, 54).join(' ') + (overview.split(' ').length > 54 ? "..." : "")) : "No overview available.";
+      let newContain = document.createElement("div");
+      newContain.innerHTML = `
+        <div class="movie" data-overview="${desc}" style="background:center / cover url(${imgPath}${poster_path})">
+        </div>
+        <div class="movieFooter">
+          <h2>${original_title}</h2>
+          <p style="background-color:${colorByRating(rating)}">${rating}</p>
+        </div>`;
+      newContain.classList.add("movieBox");
+      newContain.id = `movie-${id}`; // Add unique id to each movie container
+      movieResults.append(newContain);
     });
   };
 
@@ -134,8 +116,7 @@ document.addEventListener("DOMContentLoaded", function() {
   // Perform search
   const performSearch = function (query) {
     let filteredMovies = Array.from(moviesData.values()).filter(movie => 
-      movie.original_title.toLowerCase().includes(query.toLowerCase()) &&
-      movie.vote_average >= filterToNum(currentFilter)
+      movie.original_title.toLowerCase().includes(query.toLowerCase())
     );
     movieResults.innerHTML = ''; // Clear current movie display
     if (filteredMovies.length === 0) {
@@ -155,19 +136,36 @@ document.addEventListener("DOMContentLoaded", function() {
     searchBox.value = '';
     resultText.innerHTML = `Loading results for "${currentQuery}"...`;
     showLoading();
+    await loadAllMovies(); // Ensure all movies are loaded before searching
     performSearch(currentQuery);
     hideLoading();
   };
 
+  // Load all movies before searching
+  const loadAllMovies = async function () {
+    page = 1;
+    let totalPages = 1;
+    moviesData.clear(); // Clear existing data
+    do {
+      let currentUrl = `${baseUrl}${apiKey}&language=en-US&region=US&page=${page}`;
+      let resJSON = await getMovies(currentUrl);
+      resJSON.results.forEach(movie => {
+        if (!moviesData.has(movie.id)) {
+          moviesData.set(movie.id, movie);
+        }
+      });
+      totalPages = resJSON.total_pages;
+      page++;
+    } while (page <= totalPages);
+  };
+
   // Initial load
-  const initialLoad = async function (reset = true) {
-    if (reset) {
-      page = 1;
-      moviesData.clear();
-      movieResults.innerHTML = '';
-      resultText.innerHTML = '';
-    }
-    await loadMoreMovies(reset);
+  const initialLoad = async function () {
+    page = 1;
+    moviesData.clear();
+    movieResults.innerHTML = '';
+    resultText.innerHTML = '';
+    await loadMoreMovies(true);
   };
 
   // Event listeners
@@ -187,8 +185,6 @@ document.addEventListener("DOMContentLoaded", function() {
   homeBtn.addEventListener("click", () => {
     currentQuery = '';
     searchBox.value = '';
-    filters.forEach(x => x.classList.remove("selected"));
-    currentFilter = null;
     sortSelect.value = "original_order.asc";
     currentSort = "original_order.asc";
     initialLoad();
@@ -198,32 +194,10 @@ document.addEventListener("DOMContentLoaded", function() {
     movieResults.classList.toggle("grid-large");
   });
 
-  filters.forEach(filter => {
-    filter.addEventListener("click", async () => {
-      if (filter.classList.contains("selected")) {
-        filter.classList.remove("selected");
-        currentFilter = null;
-      } else {
-        filters.forEach(x => x.classList.remove("selected"));
-        filter.classList.add("selected");
-        currentFilter = filter.getAttribute("id");
-      }
-      showLoading();
-      if (currentQuery) {
-        // If a search is active, filter the search results
-        performSearch(currentQuery);
-      } else {
-        // If no search, reset and load movies with new filter
-        initialLoad();
-      }
-      hideLoading();
-    });
-  });
-
   sortSelect.addEventListener("change", async () => {
     currentSort = sortSelect.value;
     showLoading();
-    await initialLoad(true); // Reset and load with new sort order
+    await initialLoad(); // Reset and load with new sort order
     hideLoading();
   });
 
