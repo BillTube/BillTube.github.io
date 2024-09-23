@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", function() {
   let page = 1;
   let currentQuery = '';
   let currentFilter = null;
+  let currentSort = "original_order.asc";
   const apiKey = "?api_key=f21ecd49e65ebcde5093bfa18b67d3ac"; // Using your API key
   const imgPath = "https://image.tmdb.org/t/p/w500";
   const baseUrl = "https://api.themoviedb.org/4/list/8426658"; // Base URL for your movie list
@@ -22,9 +23,24 @@ document.addEventListener("DOMContentLoaded", function() {
   const toTopBtn = document.querySelector("#toTop");
   const loadingIcon = document.querySelector("#loading");
 
+  // Create and add sort select element
+  const sortSelect = document.createElement("select");
+  sortSelect.id = "sortOrder";
+  sortSelect.innerHTML = `
+    <option value="original_order.asc">Original Order</option>
+    <option value="popularity.desc">Popularity Descending</option>
+    <option value="vote_average.desc">Rating Descending</option>
+    <option value="primary_release_date.desc">Release Date Descending</option>
+  `;
+  form.appendChild(sortSelect);
+
   // Fetch movies from API and process them
   const getMovies = async function (url) {
     try {
+      // Add sort_by parameter to the URL if it's not the original order
+      if (currentSort !== "original_order.asc") {
+        url += `&sort_by=${currentSort}`;
+      }
       let res = await fetch(url);
       let resJSON = await res.json();
       return resJSON;
@@ -94,7 +110,12 @@ document.addEventListener("DOMContentLoaded", function() {
   };
 
   // Load more movies
-  const loadMoreMovies = async function () {
+  const loadMoreMovies = async function (resetPage = false) {
+    if (resetPage) {
+      page = 1;
+      moviesData.clear();
+      movieResults.innerHTML = '';
+    }
     if (page === null) return; // No more pages to load
     showLoading();
     let currentUrl = `${baseUrl}${apiKey}&language=en-US&region=US&page=${page}`;
@@ -139,12 +160,14 @@ document.addEventListener("DOMContentLoaded", function() {
   };
 
   // Initial load
-  const initialLoad = async function () {
-    page = 1;
-    moviesData.clear();
-    movieResults.innerHTML = '';
-    resultText.innerHTML = '';
-    await loadMoreMovies();
+  const initialLoad = async function (reset = true) {
+    if (reset) {
+      page = 1;
+      moviesData.clear();
+      movieResults.innerHTML = '';
+      resultText.innerHTML = '';
+    }
+    await loadMoreMovies(reset);
   };
 
   // Event listeners
@@ -166,6 +189,8 @@ document.addEventListener("DOMContentLoaded", function() {
     searchBox.value = '';
     filters.forEach(x => x.classList.remove("selected"));
     currentFilter = null;
+    sortSelect.value = "original_order.asc";
+    currentSort = "original_order.asc";
     initialLoad();
   });
 
@@ -193,6 +218,13 @@ document.addEventListener("DOMContentLoaded", function() {
       }
       hideLoading();
     });
+  });
+
+  sortSelect.addEventListener("change", async () => {
+    currentSort = sortSelect.value;
+    showLoading();
+    await initialLoad(true); // Reset and load with new sort order
+    hideLoading();
   });
 
   toTopBtn.addEventListener("click", () => { window.scrollTo(0, 0) });
